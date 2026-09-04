@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from database import db, RepairRecord
+from database import *
 
 app = Flask(__name__)
 
