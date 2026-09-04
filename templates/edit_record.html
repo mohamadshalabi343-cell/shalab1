@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}تعديل سجل{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    تعديل سجل #{{ record.id }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_record', record_id=record.id) }}" id="editRecordForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="worker_id" class="form-label fw-bold">اسم العامل *</label>
+                            <select class="form-select" id="worker_id" name="worker_id" required>
+                                {% for worker in workers %}
+                                <option value="{{ worker.id }}" {% if worker.id == record.worker_id %}selected{% endif %}>
+                                    {{ worker.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="device_name" class="form-label fw-bold">اسم الجهاز *</label>
+                            <input type="text" class="form-control" id="device_name" name="device_name"
+                                   value="{{ record.device_name }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="device_model" class="form-label fw-bold">موديل الجهاز</label>
+                            <input type="text" class="form-control" id="device_model" name="device_model"
+                                   value="{{ record.device_model or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label fw-bold">حالة الإصلاح</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="مكتمل" {% if record.status == 'مكتمل' %}selected{% endif %}>مكتمل</option>
+                                <option value="قيد الإصلاح" {% if record.status == 'قيد الإصلاح' %}selected{% endif %}>قيد الإصلاح</option>
+                                <option value="بانتظار القطعة" {% if record.status == 'بانتظار القطعة' %}selected{% endif %}>بانتظار القطعة</option>
+                                <option value="ملغي" {% if record.status == 'ملغي' %}selected{% endif %}>ملغي</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cost" class="form-label fw-bold">تكلفة القطعة (ل.س) *</label>
+                            <div class="input-group">
+                                <input type="number" step="1" min="0" class="form-control" id="cost"
+                                       name="cost" value="{{ record.cost }}" required>
+                                <span class="input-group-text">ل.س</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="amount_received" class="form-label fw-bold">المبلغ المقبوض (ل.س) *</label>
+                            <div class="input-group">
+                                <input type="number" step="1" min="0" class="form-control" id="amount_received"
+                                       name="amount_received" value="{{ record.amount_received }}" required>
+                                <span class="input-group-text">ل.س</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label fw-bold mb-0">الربح الحالي:</label>
+                            <span id="profit_preview" class="badge {% if record.profit >= 0 %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                {{ "%.0f"|format(record.profit) }} ل.س
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="issues" class="form-label fw-bold">مشاكل الجهاز</label>
+                        <textarea class="form-control" id="issues" name="issues" rows="3">{{ record.issues or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label fw-bold">ملاحظات إضافية</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2">{{ record.notes or '' }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-1"></i> تحديث السجل
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function calculateProfit() {
+        const cost = parseFloat(document.getElementById('cost').value) || 0;
+        const received = parseFloat(document.getElementById('amount_received').value) || 0;
+        const profit = received - cost;
+        const profitElement = document.getElementById('profit_preview');
+
+        profitElement.textContent = profit.toFixed(0) + ' ل.س';
+
+        if (profit >= 0) {
+            profitElement.className = 'badge bg-success fs-6';
+        } else {
+            profitElement.className = 'badge bg-danger fs-6';
+        }
+    }
+
+    document.getElementById('cost').addEventListener('input', calculateProfit);
+    document.getElementById('amount_received').addEventListener('input', calculateProfit);
+</script>
+{% endblock %}

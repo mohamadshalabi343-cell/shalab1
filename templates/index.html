@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}الرئيسية - نظام إدارة الورشة{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center mb-4">
+            <i class="fas fa-chart-bar me-2 text-primary"></i>
+            لوحة التحكم الرئيسية
+        </h2>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                <h5 class="card-title">إجمالي السجلات</h5>
+                <h3 class="stat-number">{{ total_records }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                <h5 class="card-title">إجمالي الإيرادات</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-warning text-dark">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h5 class="card-title">إجمالي التكاليف</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_cost) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h5 class="card-title">إجمالي الربح</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_profit) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            سجلات الإصلاح
+        </h5>
+        <a href="{{ url_for('add_record') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus me-1"></i> إضافة سجل جديد
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>العامل</th>
+                        <th>الجهاز</th>
+                        <th>الموديل</th>
+                        <th>التكلفة</th>
+                        <th>المقبوض</th>
+                        <th>الربح</th>
+                        <th>المشاكل</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
+                        <td>{{ record.device_name }}</td>
+                        <td>{{ record.device_model or '-' }}</td>
+                        <td class="text-danger fw-bold">{{ "%.0f"|format(record.cost) }} ل.س</td>
+                        <td class="text-success fw-bold">{{ "%.0f"|format(record.amount_received) }} ل.س</td>
+                        <td>
+                            {% if record.profit >= 0 %}
+                                <span class="badge bg-success">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.issues %}
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.issues }}">
+                                    {{ record.issues[:20] }}{% if record.issues|length > 20 %}...{% endif %}
+                                </span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ record.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('view_record', record_id=record.id) }}" class="btn btn-info btn-sm" title="عرض">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_record', record_id=record.id) }}" class="btn btn-warning btn-sm" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('delete_record', record_id=record.id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('هل أنت متأكد من حذف هذا السجل؟');">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد سجلات بعد. ابدأ بإضافة أول سجل!</p>
+                            <a href="{{ url_for('add_record') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> إضافة سجل
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            أداء العمال
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover text-center align-middle">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>العامل</th>
+                        <th>عدد الإصلاحات</th>
+                        <th>الإيرادات</th>
+                        <th>التكاليف</th>
+                        <th>الربح</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, stats in worker_stats.items() %}
+                    <tr>
+                        <td class="fw-bold">{{ name }}</td>
+                        <td>{{ stats.count }}</td>
+                        <td class="text-success">{{ "%.0f"|format(stats.revenue) }} ل.س</td>
+                        <td class="text-danger">{{ "%.0f"|format(stats.cost) }} ل.س</td>
+                        <td>
+                            <span class="badge {% if stats.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ "%.0f"|format(stats.profit) }} ل.س
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
