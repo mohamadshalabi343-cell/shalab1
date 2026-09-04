@@ -1,7 +1,8 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from database import db, Worker, RepairRecord
-from datetime import datetime
+from flask import Flask
+
+app = Flask(__name__)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///workshop.db')
 
 app = Flask(__name__)
