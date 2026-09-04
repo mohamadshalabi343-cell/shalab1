@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from database import db  # استدعاء db من ملف قاعدة البيانات
+from database import db, RepairRecord
 
 app = Flask(__name__)
 
