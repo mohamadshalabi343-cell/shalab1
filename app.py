@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from database import *
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # مهم جداً لتفادي أخطاء الجلسات و flash
+app.config['SECRET_KEY'] = 'your-secret-key-here'
 uri = os.environ.get('DATABASE_URL', 'sqlite:///workshop.db')
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -25,7 +25,7 @@ def index():
     total_records = len(records)
     total_revenue = sum(r.effective_amount_received for r in records)
     total_cost = sum(r.cost for r in records)
-    total_profit = sum(r.profit for r in records)   # التعديل هنا
+    total_profit = total_revenue - total_cost   # الربح = الإيرادات الفعلية - التكاليف الكلية
 
     worker_stats = {}
     for worker in workers:
@@ -149,7 +149,7 @@ def workers():
         records = RepairRecord.query.filter_by(worker_id=worker.id).all()
         worker_performance[worker.id] = {
             'total_records': len(records),
-            'total_revenue': sum(r.effective_amount_received for r in records),   # تعديل
+            'total_revenue': sum(r.effective_amount_received for r in records),
             'total_profit': sum(r.profit for r in records)
         }
 
