@@ -4,7 +4,10 @@ from database import *
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # مهم جداً لتفادي أخطاء الجلسات و flash
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///workshop.db')
+uri = os.environ.get('DATABASE_URL', 'sqlite:///workshop.db')
+if uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
