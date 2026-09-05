@@ -41,11 +41,10 @@
                         <div class="col-md-6 mb-3">
                             <label for="status" class="form-label fw-bold">حالة الإصلاح</label>
                             <select class="form-select" id="status" name="status">
-                                <option value="مكتمل" {% if record.status == 'مكتمل' %}selected{% endif %}>مكتمل</option>
-                                <option value="قيد الإصلاح" {% if record.status == 'قيد الإصلاح' %}selected{% endif %}>قيد الإصلاح</option>
-                                <option value="بانتظار القطعة" {% if record.status == 'بانتظار القطعة' %}selected{% endif %}>بانتظار القطعة</option>
-                                <option value="ملغي" {% if record.status == 'ملغي' %}selected{% endif %}>ملغي</option>
-                            </select>
+    <option value="تم التسليم" {% if record.status == 'تم التسليم' %}selected{% endif %}>تم التسليم</option>
+    <option value="لم تسلم" {% if record.status == 'لم تسلم' %}selected{% endif %}>لم تسلم</option>
+    <option value="دين" {% if record.status == 'دين' %}selected{% endif %}>دين</option>
+</select>
                         </div>
                     </div>
 
