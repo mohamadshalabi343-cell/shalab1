@@ -32,10 +32,8 @@ class RepairRecord(db.Model):
     
     @property
     def profit(self):
-        """الربح لا يحسب إلا إذا كانت الحالة 'تم التسليم'"""
-        if self.status == 'تم التسليم':
-            return self.amount_received - self.cost
-        return 0
+        """الربح = (المبلغ المقبوض الفعلي حسب الحالة) - التكلفة"""
+        return self.effective_amount_received - self.cost
     
     @property
     def effective_amount_received(self):
