@@ -20,22 +20,22 @@ with app.app_context():
 @app.route('/')
 def index():
     records = RepairRecord.query.order_by(RepairRecord.created_at.desc()).all()
-workers = Worker.query.all()
+    workers = Worker.query.all()
 
-total_records = len(records)
-total_revenue = sum(r.effective_amount_received for r in records)
-total_cost = sum(r.cost for r in records)
-total_profit = total_revenue - total_cost
+    total_records = len(records)
+    total_revenue = sum(r.effective_amount_received for r in records)
+    total_cost = sum(r.cost for r in records)
+    total_profit = sum(r.profit for r in records)   # التعديل هنا
 
-worker_stats = {}
-for worker in workers:
-    worker_records = [r for r in records if r.worker_id == worker.id]
-    worker_stats[worker.name] = {
-        'count': len(worker_records),
-        'revenue': sum(r.effective_amount_received for r in worker_records),
-        'cost': sum(r.cost for r in worker_records),
-        'profit': sum(r.profit for r in worker_records)
-    }
+    worker_stats = {}
+    for worker in workers:
+        worker_records = [r for r in records if r.worker_id == worker.id]
+        worker_stats[worker.name] = {
+            'count': len(worker_records),
+            'revenue': sum(r.effective_amount_received for r in worker_records),
+            'cost': sum(r.cost for r in worker_records),
+            'profit': sum(r.profit for r in worker_records)
+        }
 
     return render_template('index.html',
                           records=records,
@@ -149,7 +149,7 @@ def workers():
         records = RepairRecord.query.filter_by(worker_id=worker.id).all()
         worker_performance[worker.id] = {
             'total_records': len(records),
-            'total_revenue': sum(r.amount_received for r in records),
+            'total_revenue': sum(r.effective_amount_received for r in records),   # تعديل
             'total_profit': sum(r.profit for r in records)
         }
 
@@ -209,35 +209,30 @@ def api_record(record_id):
 @app.route('/api/stats')
 def api_stats():
     records = RepairRecord.query.all()
-workers = Worker.query.all()
+    workers = Worker.query.all()
 
-stats = {
-    'total_records': len(records),
-    'total_revenue': sum(r.effective_amount_received for r in records),
-    'total_cost': sum(r.cost for r in records),
-    'total_profit': sum(r.profit for r in records),
-    'workers': []
-}
+    stats = {
+        'total_records': len(records),
+        'total_revenue': sum(r.effective_amount_received for r in records),
+        'total_cost': sum(r.cost for r in records),
+        'total_profit': sum(r.profit for r in records),
+        'workers': []
+    }
 
-for worker in workers:
-    worker_records = [r for r in records if r.worker_id == worker.id]
-    stats['workers'].append({
-        'name': worker.name,
-        'count': len(worker_records),
-        'revenue': sum(r.effective_amount_received for r in worker_records),
-        'cost': sum(r.cost for r in worker_records),
-        'profit': sum(r.profit for r in worker_records)
-    })
     for worker in workers:
         worker_records = [r for r in records if r.worker_id == worker.id]
         stats['workers'].append({
             'name': worker.name,
             'count': len(worker_records),
-            'revenue': sum(r.amount_received for r in worker_records),
+            'revenue': sum(r.effective_amount_received for r in worker_records),
             'cost': sum(r.cost for r in worker_records),
             'profit': sum(r.profit for r in worker_records)
         })
 
+    return jsonify(stats)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
     return jsonify(stats)
 
 if __name__ == '__main__':
