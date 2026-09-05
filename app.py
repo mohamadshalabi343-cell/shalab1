@@ -57,7 +57,7 @@ def add_record():
             amount_received = float(request.form.get('amount_received', 0) or 0)
             issues = request.form.get('issues', '').strip()
             notes = request.form.get('notes', '').strip()
-            status = request.form.get('status', 'مكتمل')
+            status = request.form.get('status', 'تم التسليم')
 
             if not device_name:
                 flash('اسم الجهاز مطلوب!', 'error')
