@@ -26,7 +26,7 @@ class RepairRecord(db.Model):
     amount_received = db.Column(db.Float, nullable=False, default=0.0)
     issues = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(50), default='مكتمل')
+    status = db.Column(db.String(50), default='تم التسليم')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
