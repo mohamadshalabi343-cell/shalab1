@@ -1,10 +1,10 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from database import *
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -32,6 +32,84 @@ def get_weekly_range():
     start_date = last_thursday - timedelta(days=6)
     end_date = last_thursday + timedelta(days=1)
     return start_date, end_date, last_thursday
+
+def get_day_range(day_date):
+    """تعيد بداية ونهاية يوم معين (من منتصف ليلة إلى منتصف ليلة)"""
+    start = datetime.combine(day_date, datetime.min.time())
+    end = datetime.combine(day_date, datetime.max.time())
+    return start, end
+
+def generate_day_report_pdf(day_date, records):
+    """
+    توليد صفحة PDF لتقرير يوم معين، تعيد قائمة من عناصر reportlab
+    (للاستخدام في تقرير الأسبوع)
+    """
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # عنوان اليوم
+    day_title = Paragraph(f"<b>تقرير يوم {day_date.strftime('%Y-%m-%d')} ({day_date.strftime('%A')})</b>", 
+                          ParagraphStyle('DayTitle', parent=styles['Heading1'], fontSize=14, alignment=1, spaceAfter=8))
+    elements.append(day_title)
+    
+    if not records:
+        elements.append(Paragraph("لا توجد أجهزة مضافة في هذا اليوم.", styles['Normal']))
+        return elements
+    
+    # إحصائيات اليوم
+    total_cost = sum(r.cost for r in records)
+    total_revenue = sum(r.effective_amount_received for r in records)
+    total_profit = total_revenue - total_cost
+    
+    summary_style = ParagraphStyle('DaySummary', parent=styles['Normal'], fontSize=10, spaceAfter=4)
+    elements.append(Paragraph(f"<b>عدد الأجهزة:</b> {len(records)}", summary_style))
+    elements.append(Paragraph(f"<b>إجمالي التكلفة:</b> {total_cost:,.0f} ل.س", summary_style))
+    elements.append(Paragraph(f"<b>إجمالي الإيرادات:</b> {total_revenue:,.0f} ل.س", summary_style))
+    elements.append(Paragraph(f"<b>صافي الربح:</b> {total_profit:,.0f} ل.س", summary_style))
+    elements.append(Spacer(1, 6))
+    
+    # جدول الأجهزة
+    table_data = [
+        ['#', 'العامل', 'الجهاز', 'التكلفة', 'المقبوض', 'الربح']
+    ]
+    for r in records:
+        profit_val = r.profit
+        table_data.append([
+            str(r.id),
+            r.worker.name,
+            r.device_name[:25] + ('...' if len(r.device_name) > 25 else ''),
+            f"{r.cost:,.0f}",
+            f"{r.effective_amount_received:,.0f}",
+            f"{profit_val:,.0f}"
+        ])
+    
+    table = Table(table_data, colWidths=[0.8*cm, 3*cm, 4*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
+    ]))
+    # تلوين الأرباح
+    for i in range(1, len(table_data)):
+        profit_val = float(table_data[i][5].replace(',', ''))
+        if profit_val < 0:
+            table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.red)]))
+        else:
+            table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.green)]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("---", styles['Normal']))
+    
+    return elements
 
 # ============ الصفحات الرئيسية ============
 
@@ -167,6 +245,48 @@ def view_record(record_id):
     record = RepairRecord.query.get_or_404(record_id)
     return render_template('view_record.html', record=record)
 
+# ============ تقرير اليوم ============
+
+@app.route('/daily/<string:date_str>')
+def daily_report(date_str):
+    """عرض الأجهزة المضافة في يوم محدد (YYYY-MM-DD)"""
+    try:
+        day_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('تاريخ غير صالح!', 'error')
+        return redirect(url_for('index'))
+    
+    start, end = get_day_range(day_date)
+    records = RepairRecord.query.filter(
+        RepairRecord.created_at >= start,
+        RepairRecord.created_at <= end
+    ).order_by(RepairRecord.created_at.asc()).all()
+    
+    total_records = len(records)
+    total_cost = sum(r.cost for r in records)
+    total_revenue = sum(r.effective_amount_received for r in records)
+    total_profit = total_revenue - total_cost
+    
+    # إحصائيات العمال في هذا اليوم
+    workers_stats = {}
+    for record in records:
+        worker_name = record.worker.name
+        if worker_name not in workers_stats:
+            workers_stats[worker_name] = {'count': 0, 'revenue': 0, 'cost': 0, 'profit': 0}
+        workers_stats[worker_name]['count'] += 1
+        workers_stats[worker_name]['revenue'] += record.effective_amount_received
+        workers_stats[worker_name]['cost'] += record.cost
+        workers_stats[worker_name]['profit'] += record.profit
+    
+    return render_template('daily_report.html',
+                          day_date=day_date,
+                          records=records,
+                          total_records=total_records,
+                          total_cost=total_cost,
+                          total_revenue=total_revenue,
+                          total_profit=total_profit,
+                          workers_stats=workers_stats)
+
 # ============ إدارة العمال ============
 
 @app.route('/workers')
@@ -260,51 +380,39 @@ def api_stats():
 
     return jsonify(stats)
 
-# ============ API للمخططات البيانية ============
-
 @app.route('/api/chart-data')
 def chart_data():
     """ترجع بيانات المخططات: الإيرادات والأرباح اليومية وأداء العمال"""
     start_date, end_date, last_thursday = get_weekly_range()
     
-    # جلب جميع السجلات في الأسبوع
     records = RepairRecord.query.filter(
         RepairRecord.created_at >= start_date,
         RepairRecord.created_at < end_date
     ).all()
     
-    # تجميع البيانات حسب اليوم (الأيام من السبت إلى الخميس)
     days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']
-    day_numbers = list(range(7))  # 0->السبت, 6->الخميس
     revenue_by_day = [0] * 7
     profit_by_day = [0] * 7
     
     for record in records:
-        # اليوم الذي تم فيه الإصلاح (رقم اليوم من 0 إلى 6)
-        day_index = record.created_at.weekday()  # Mon=0, Sun=6
-        # نحول إلى ترتيب يبدأ من السبت (0)
-        # في Python: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
-        # نريد: Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6
-        # لذا إذا كان weekday = 5 (Sat) -> 0، 6 (Sun)->1، 0 (Mon)->2، ...
-        if day_index == 5:  # السبت
+        day_index = record.created_at.weekday()
+        if day_index == 5:
             adjusted = 0
-        elif day_index == 6:  # الأحد
+        elif day_index == 6:
             adjusted = 1
         else:
-            adjusted = day_index + 2  # الاثنين -> 3، الخميس -> 6
+            adjusted = day_index + 2
         
-        # نتأكد من أن اليوم ضمن الأسبوع
         if 0 <= adjusted <= 6:
             revenue_by_day[adjusted] += record.effective_amount_received
             profit_by_day[adjusted] += record.profit
     
-    # تجميع أداء العمال
     workers = Worker.query.all()
     workers_data = []
     for worker in workers:
         worker_records = [r for r in records if r.worker_id == worker.id]
         total_profit = sum(r.profit for r in worker_records)
-        if total_profit != 0:  # نعرض فقط من لديهم أرباح
+        if total_profit != 0:
             workers_data.append({
                 'name': worker.name,
                 'profit': total_profit
@@ -317,90 +425,63 @@ def chart_data():
         'workers': workers_data
     })
 
-# ============ تقرير PDF الأسبوعي ============
+# ============ تقرير PDF الأسبوعي (مع صفحات الأيام) ============
 
 @app.route('/report/weekly')
 def download_weekly_report():
     start_date, end_date, last_thursday = get_weekly_range()
-    
-    records = RepairRecord.query.filter(
-        RepairRecord.created_at >= start_date,
-        RepairRecord.created_at < end_date
-    ).order_by(RepairRecord.created_at.desc()).all()
-    
-    total_records = len(records)
-    total_cost = sum(r.cost for r in records)
-    total_revenue = sum(r.effective_amount_received for r in records)
-    total_profit = total_revenue - total_cost
     
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     elements = []
     styles = getSampleStyleSheet()
     
+    # عنوان التقرير الرئيسي
     title_style = ParagraphStyle(
-        'TitleStyle',
+        'MainTitle',
         parent=styles['Heading1'],
-        fontSize=16,
+        fontSize=18,
         alignment=1,
         spaceAfter=12
     )
-    title = Paragraph(f"<b>تقرير إيرادات الأسبوع</b><br/>(من {start_date.strftime('%Y-%m-%d')} إلى {last_thursday.strftime('%Y-%m-%d')})", title_style)
-    elements.append(title)
+    elements.append(Paragraph(f"<b>تقرير الأسبوع</b><br/>(من {start_date.strftime('%Y-%m-%d')} إلى {last_thursday.strftime('%Y-%m-%d')})", title_style))
+    elements.append(Spacer(1, 6))
+    
+    # إحصائيات عامة للأسبوع (سيتم حسابها لاحقاً)
+    all_records = RepairRecord.query.filter(
+        RepairRecord.created_at >= start_date,
+        RepairRecord.created_at < end_date
+    ).all()
+    
+    total_records = len(all_records)
+    total_cost = sum(r.cost for r in all_records)
+    total_revenue = sum(r.effective_amount_received for r in all_records)
+    total_profit = total_revenue - total_cost
+    
+    summary_style = ParagraphStyle('WeekSummary', parent=styles['Normal'], fontSize=12, spaceAfter=6)
+    elements.append(Paragraph(f"<b>إجمالي الأجهزة:</b> {total_records}", summary_style))
+    elements.append(Paragraph(f"<b>إجمالي التكلفة:</b> {total_cost:,.0f} ل.س", summary_style))
+    elements.append(Paragraph(f"<b>إجمالي الإيرادات:</b> {total_revenue:,.0f} ل.س", summary_style))
+    elements.append(Paragraph(f"<b>صافي الربح:</b> {total_profit:,.0f} ل.س", summary_style))
     elements.append(Spacer(1, 12))
     
-    summary_style = ParagraphStyle('SummaryStyle', parent=styles['Normal'], fontSize=12, spaceAfter=6)
-    summary_data = [
-        f"<b>عدد الإصلاحات:</b> {total_records}",
-        f"<b>إجمالي التكلفة:</b> {total_cost:,.0f} ل.س",
-        f"<b>إجمالي الإيرادات الفعلية:</b> {total_revenue:,.0f} ل.س",
-        f"<b>صافي الربح:</b> {total_profit:,.0f} ل.س"
-    ]
-    for line in summary_data:
-        elements.append(Paragraph(line, summary_style))
-    elements.append(Spacer(1, 12))
-    
-    if records:
-        table_data = [
-            ['#', 'العامل', 'الجهاز', 'التكلفة', 'المقبوض', 'الربح']
-        ]
-        for r in records:
-            profit_val = r.profit
-            profit_str = f"{profit_val:,.0f}"
-            table_data.append([
-                str(r.id),
-                r.worker.name,
-                r.device_name[:20] + ('...' if len(r.device_name) > 20 else ''),
-                f"{r.cost:,.0f}",
-                f"{r.effective_amount_received:,.0f}",
-                profit_str
-            ])
+    # الآن نضيف صفحة لكل يوم من أيام الأسبوع
+    current_day = start_date
+    while current_day <= last_thursday:
+        day_start, day_end = get_day_range(current_day)
+        day_records = [r for r in all_records if day_start <= r.created_at <= day_end]
         
-        table = Table(table_data, colWidths=[0.8*cm, 3.5*cm, 4*cm, 2.5*cm, 2.5*cm, 2.5*cm])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
-        ]))
-        for i in range(1, len(table_data)):
-            profit_val = float(table_data[i][5].replace(',', ''))
-            if profit_val < 0:
-                table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.red)]))
-            else:
-                table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.green)]))
+        # توليد محتوى اليوم
+        day_elements = generate_day_report_pdf(current_day, day_records)
+        elements.extend(day_elements)
         
-        elements.append(table)
-    else:
-        elements.append(Paragraph("لا توجد سجلات في هذا الأسبوع.", styles['Normal']))
+        # إضافة فاصل صفحة بعد كل يوم ما عدا اليوم الأخير
+        if current_day < last_thursday:
+            elements.append(PageBreak())
+        
+        current_day += timedelta(days=1)
     
+    # بناء الملف
     doc.build(elements)
     buffer.seek(0)
     
