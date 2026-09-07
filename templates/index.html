@@ -4,21 +4,27 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-12">
-        <h2 class="text-center mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">
             <i class="fas fa-chart-bar me-2 text-primary"></i>
             لوحة التحكم الرئيسية
         </h2>
+        <div>
+            <button id="refresh-stats-btn" class="btn btn-outline-primary btn-sm" title="تحديث الإحصائيات">
+                <i class="fas fa-sync-alt"></i> تحديث
+            </button>
+        </div>
     </div>
 </div>
 
+<!-- بطاقات الإحصائيات -->
 <div class="row mb-4">
     <div class="col-md-3 col-sm-6 mb-3">
         <div class="card stat-card bg-primary text-white">
             <div class="card-body text-center">
                 <i class="fas fa-clipboard-list fa-2x mb-2"></i>
                 <h5 class="card-title">إجمالي السجلات</h5>
-                <h3 class="stat-number">{{ total_records }}</h3>
+                <h3 class="stat-number" id="total-records">{{ total_records }}</h3>
             </div>
         </div>
     </div>
@@ -27,7 +33,7 @@
             <div class="card-body text-center">
                 <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
                 <h5 class="card-title">إجمالي الإيرادات</h5>
-                <h3 class="stat-number">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
+                <h3 class="stat-number" id="total-revenue">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
             </div>
         </div>
     </div>
@@ -36,7 +42,7 @@
             <div class="card-body text-center">
                 <i class="fas fa-coins fa-2x mb-2"></i>
                 <h5 class="card-title">إجمالي التكاليف</h5>
-                <h3 class="stat-number">{{ "%.0f"|format(total_cost) }} ل.س</h3>
+                <h3 class="stat-number" id="total-cost">{{ "%.0f"|format(total_cost) }} ل.س</h3>
             </div>
         </div>
     </div>
@@ -45,29 +51,56 @@
             <div class="card-body text-center">
                 <i class="fas fa-chart-line fa-2x mb-2"></i>
                 <h5 class="card-title">إجمالي الربح</h5>
-                <h3 class="stat-number">{{ "%.0f"|format(total_profit) }} ل.س</h3>
+                <h3 class="stat-number" id="total-profit">{{ "%.0f"|format(total_profit) }} ل.س</h3>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">
-        <i class="fas fa-list me-2"></i>
-        سجلات الإصلاح
-    </h5>
-    <div>
-        <a href="{{ url_for('download_weekly_report') }}" class="btn btn-success btn-sm me-2">
-            <i class="fas fa-file-pdf me-1"></i> تقرير الأسبوع
-        </a>
-        <a href="{{ url_for('add_record') }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus me-1"></i> إضافة سجل جديد
-        </a>
+<!-- المخططات البيانية -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>الإيرادات والأرباح اليومية (هذا الأسبوع)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>مساهمة العمال في الأرباح</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="workersChart" height="200"></canvas>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- جدول السجلات مع بحث فوري -->
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            سجلات الإصلاح
+        </h5>
+        <div class="d-flex gap-2">
+            <input type="text" id="tableSearch" class="form-control form-control-sm" placeholder="بحث..." style="width: 200px;">
+            <a href="{{ url_for('download_weekly_report') }}" class="btn btn-success btn-sm">
+                <i class="fas fa-file-pdf me-1"></i> تقرير الأسبوع
+            </a>
+            <a href="{{ url_for('add_record') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i> إضافة سجل
+            </a>
+        </div>
+    </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover table-striped text-center align-middle">
+            <table class="table table-hover table-striped text-center align-middle" id="recordsTable">
                 <thead class="table-dark">
                     <tr>
                         <th>#</th>
@@ -141,6 +174,7 @@
     </div>
 </div>
 
+<!-- جدول أداء العمال (سيتم تحديثه أيضاً) -->
 <div class="card shadow-sm mt-4">
     <div class="card-header">
         <h5 class="mb-0">
@@ -150,7 +184,7 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover text-center align-middle">
+            <table class="table table-hover text-center align-middle" id="workersTable">
                 <thead class="table-secondary">
                     <tr>
                         <th>العامل</th>
@@ -179,4 +213,119 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // رسم المخططات عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/chart-data')
+            .then(response => response.json())
+            .then(data => {
+                // المخطط الخطي/الشريطي
+                const ctx1 = document.getElementById('weeklyChart').getContext('2d');
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'الإيرادات',
+                                data: data.revenue,
+                                backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                                borderColor: 'rgba(40, 167, 69, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'الأرباح',
+                                data: data.profit,
+                                backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                                borderColor: 'rgba(0, 123, 255, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+
+                // المخطط الدائري للعمال
+                const ctx2 = document.getElementById('workersChart').getContext('2d');
+                const workerNames = data.workers.map(w => w.name);
+                const workerProfits = data.workers.map(w => w.profit);
+                const colors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                ];
+                new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: workerNames,
+                        datasets: [{
+                            data: workerProfits,
+                            backgroundColor: colors.slice(0, workerNames.length),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('خطأ في تحميل بيانات المخططات:', error));
+    });
+
+    // تحديث البطاقات والإحصائيات كل 30 ثانية
+    function refreshStats() {
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('total-records').textContent = data.total_records;
+                document.getElementById('total-revenue').textContent = data.total_revenue.toFixed(0) + ' ل.س';
+                document.getElementById('total-cost').textContent = data.total_cost.toFixed(0) + ' ل.س';
+                document.getElementById('total-profit').textContent = data.total_profit.toFixed(0) + ' ل.س';
+
+                // تحديث جدول أداء العمال (يمكن حذفه إذا كان التحديث غير ضروري)
+                // نفضل إعادة تحميل الصفحة لتحديث الجداول بالكامل، لكن هذا اختياري.
+                // سنترك التحديث التلقائي للبطاقات فقط.
+            })
+            .catch(error => console.error('خطأ في تحديث الإحصائيات:', error));
+    }
+
+    // تحديث كل 30 ثانية
+    setInterval(refreshStats, 30000);
+
+    // عند الضغط على زر التحديث اليدوي
+    document.getElementById('refresh-stats-btn').addEventListener('click', function() {
+        refreshStats();
+        // نعطي تأثير دوران للزر
+        this.querySelector('i').classList.add('fa-spin');
+        setTimeout(() => {
+            this.querySelector('i').classList.remove('fa-spin');
+        }, 1000);
+    });
+
+    // تفعيل البحث الفوري في الجدول
+    const searchInput = document.getElementById('tableSearch');
+    const table = document.getElementById('recordsTable');
+    if (searchInput && table) {
+        searchInput.addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    }
+</script>
 {% endblock %}
