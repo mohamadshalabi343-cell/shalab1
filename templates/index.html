@@ -88,11 +88,8 @@
             <i class="fas fa-list me-2"></i>
             سجلات الإصلاح
         </h5>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2">
             <input type="text" id="tableSearch" class="form-control form-control-sm" placeholder="بحث..." style="width: 200px;">
-            <a href="{{ url_for('daily_report', date_str=today_date.strftime('%Y-%m-%d')) }}" class="btn btn-info btn-sm">
-                <i class="fas fa-calendar-day me-1"></i> تقرير اليوم
-            </a>
             <a href="{{ url_for('download_weekly_report') }}" class="btn btn-success btn-sm">
                 <i class="fas fa-file-pdf me-1"></i> تقرير الأسبوع
             </a>
@@ -177,7 +174,7 @@
     </div>
 </div>
 
-<!-- جدول أداء العمال -->
+<!-- جدول أداء العمال (سيتم تحديثه أيضاً) -->
 <div class="card shadow-sm mt-4">
     <div class="card-header">
         <h5 class="mb-0">
@@ -220,11 +217,12 @@
 
 {% block scripts %}
 <script>
+    // رسم المخططات عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', function() {
-        // رسم المخططات
         fetch('/api/chart-data')
             .then(response => response.json())
             .then(data => {
+                // المخطط الخطي/الشريطي
                 const ctx1 = document.getElementById('weeklyChart').getContext('2d');
                 new Chart(ctx1, {
                     type: 'bar',
@@ -258,10 +256,13 @@
                     }
                 });
 
+                // المخطط الدائري للعمال
                 const ctx2 = document.getElementById('workersChart').getContext('2d');
                 const workerNames = data.workers.map(w => w.name);
                 const workerProfits = data.workers.map(w => w.profit);
-                const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                const colors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                ];
                 new Chart(ctx2, {
                     type: 'doughnut',
                     data: {
@@ -281,46 +282,50 @@
                 });
             })
             .catch(error => console.error('خطأ في تحميل بيانات المخططات:', error));
-
-        // تحديث البطاقات
-        function refreshStats() {
-            fetch('/api/stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-records').textContent = data.total_records;
-                    document.getElementById('total-revenue').textContent = data.total_revenue.toFixed(0) + ' ل.س';
-                    document.getElementById('total-cost').textContent = data.total_cost.toFixed(0) + ' ل.س';
-                    document.getElementById('total-profit').textContent = data.total_profit.toFixed(0) + ' ل.س';
-                })
-                .catch(error => console.error('خطأ في تحديث الإحصائيات:', error));
-        }
-
-        setInterval(refreshStats, 30000);
-
-        document.getElementById('refresh-stats-btn').addEventListener('click', function() {
-            refreshStats();
-            this.querySelector('i').classList.add('fa-spin');
-            setTimeout(() => {
-                this.querySelector('i').classList.remove('fa-spin');
-            }, 1000);
-        });
-
-        // البحث الفوري
-        const searchInput = document.getElementById('tableSearch');
-        const table = document.getElementById('recordsTable');
-        if (searchInput && table) {
-            searchInput.addEventListener('keyup', function() {
-                const filter = this.value.toLowerCase();
-                const rows = table.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(filter) ? '' : 'none';
-                });
-            });
-        }
     });
-</script>
-{% endblock %}
+
+    // تحديث البطاقات والإحصائيات كل 30 ثانية
+    function refreshStats() {
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('total-records').textContent = data.total_records;
+                document.getElementById('total-revenue').textContent = data.total_revenue.toFixed(0) + ' ل.س';
+                document.getElementById('total-cost').textContent = data.total_cost.toFixed(0) + ' ل.س';
+                document.getElementById('total-profit').textContent = data.total_profit.toFixed(0) + ' ل.س';
+
+                // تحديث جدول أداء العمال (يمكن حذفه إذا كان التحديث غير ضروري)
+                // نفضل إعادة تحميل الصفحة لتحديث الجداول بالكامل، لكن هذا اختياري.
+                // سنترك التحديث التلقائي للبطاقات فقط.
+            })
+            .catch(error => console.error('خطأ في تحديث الإحصائيات:', error));
+    }
+
+    // تحديث كل 30 ثانية
+    setInterval(refreshStats, 30000);
+
+    // عند الضغط على زر التحديث اليدوي
+    document.getElementById('refresh-stats-btn').addEventListener('click', function() {
+        refreshStats();
+        // نعطي تأثير دوران للزر
+        this.querySelector('i').classList.add('fa-spin');
+        setTimeout(() => {
+            this.querySelector('i').classList.remove('fa-spin');
+        }, 1000);
+    });
+
+    // تفعيل البحث الفوري في الجدول
+    const searchInput = document.getElementById('tableSearch');
+    const table = document.getElementById('recordsTable');
+    if (searchInput && table) {
+        searchInput.addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
     }
 </script>
 {% endblock %}
