@@ -85,7 +85,6 @@ def add_record():
                 flash('اسم العامل مطلوب!', 'error')
                 return redirect(url_for('add_record'))
 
-            # التحقق من وجود العامل
             worker = Worker.query.get(worker_id)
             if not worker:
                 flash('العامل المحدد غير موجود!', 'error')
@@ -123,7 +122,6 @@ def edit_record(record_id):
     if request.method == 'POST':
         try:
             worker_id = int(request.form.get('worker_id'))
-            # التحقق من وجود العامل
             worker = Worker.query.get(worker_id)
             if not worker:
                 flash('العامل المحدد غير موجود!', 'error')
@@ -262,6 +260,63 @@ def api_stats():
 
     return jsonify(stats)
 
+# ============ API للمخططات البيانية ============
+
+@app.route('/api/chart-data')
+def chart_data():
+    """ترجع بيانات المخططات: الإيرادات والأرباح اليومية وأداء العمال"""
+    start_date, end_date, last_thursday = get_weekly_range()
+    
+    # جلب جميع السجلات في الأسبوع
+    records = RepairRecord.query.filter(
+        RepairRecord.created_at >= start_date,
+        RepairRecord.created_at < end_date
+    ).all()
+    
+    # تجميع البيانات حسب اليوم (الأيام من السبت إلى الخميس)
+    days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']
+    day_numbers = list(range(7))  # 0->السبت, 6->الخميس
+    revenue_by_day = [0] * 7
+    profit_by_day = [0] * 7
+    
+    for record in records:
+        # اليوم الذي تم فيه الإصلاح (رقم اليوم من 0 إلى 6)
+        day_index = record.created_at.weekday()  # Mon=0, Sun=6
+        # نحول إلى ترتيب يبدأ من السبت (0)
+        # في Python: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+        # نريد: Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6
+        # لذا إذا كان weekday = 5 (Sat) -> 0، 6 (Sun)->1، 0 (Mon)->2، ...
+        if day_index == 5:  # السبت
+            adjusted = 0
+        elif day_index == 6:  # الأحد
+            adjusted = 1
+        else:
+            adjusted = day_index + 2  # الاثنين -> 3، الخميس -> 6
+        
+        # نتأكد من أن اليوم ضمن الأسبوع
+        if 0 <= adjusted <= 6:
+            revenue_by_day[adjusted] += record.effective_amount_received
+            profit_by_day[adjusted] += record.profit
+    
+    # تجميع أداء العمال
+    workers = Worker.query.all()
+    workers_data = []
+    for worker in workers:
+        worker_records = [r for r in records if r.worker_id == worker.id]
+        total_profit = sum(r.profit for r in worker_records)
+        if total_profit != 0:  # نعرض فقط من لديهم أرباح
+            workers_data.append({
+                'name': worker.name,
+                'profit': total_profit
+            })
+    
+    return jsonify({
+        'labels': days,
+        'revenue': revenue_by_day,
+        'profit': profit_by_day,
+        'workers': workers_data
+    })
+
 # ============ تقرير PDF الأسبوعي ============
 
 @app.route('/report/weekly')
@@ -335,17 +390,12 @@ def download_weekly_report():
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
         ]))
-        # تلوين الخلايا السالبة في عمود الربح
         for i in range(1, len(table_data)):
             profit_val = float(table_data[i][5].replace(',', ''))
             if profit_val < 0:
-                table.setStyle(TableStyle([
-                    ('TEXTCOLOR', (5, i), (5, i), colors.red),
-                ]))
+                table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.red)]))
             else:
-                table.setStyle(TableStyle([
-                    ('TEXTCOLOR', (5, i), (5, i), colors.green),
-                ]))
+                table.setStyle(TableStyle([('TEXTCOLOR', (5, i), (5, i), colors.green)]))
         
         elements.append(table)
     else:
