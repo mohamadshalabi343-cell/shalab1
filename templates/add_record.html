@@ -1,124 +1,160 @@
 {% extends 'base.html' %}
 
-{% block title %}إضافة سجل جديد{% endblock %}
+{% block title %}تقرير يوم {{ day_date.strftime('%Y-%m-%d') }}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-plus-circle me-2"></i>
-                    إضافة سجل إصلاح جديد
-                </h5>
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center">
+            <i class="fas fa-calendar-day me-2 text-primary"></i>
+            تقرير يوم {{ day_date.strftime('%Y-%m-%d') }} ({{ day_date.strftime('%A') }})
+        </h2>
+        <div class="text-center mt-2">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right me-1"></i> رجوع للرئيسية
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- بطاقات الإحصائيات -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-mobile-alt fa-2x mb-2"></i>
+                <h5 class="card-title">عدد الأجهزة</h5>
+                <h3 class="stat-number">{{ total_records }}</h3>
             </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('add_record') }}" id="addRecordForm">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="worker_id" class="form-label fw-bold">اسم العامل *</label>
-                            <select class="form-select" id="worker_id" name="worker_id" required>
-                                <option value="">اختر العامل...</option>
-                                {% for worker in workers %}
-                                <option value="{{ worker.id }}">{{ worker.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="device_name" class="form-label fw-bold">اسم الجهاز *</label>
-                            <input type="text" class="form-control" id="device_name" name="device_name"
-                                   placeholder="مثال: iPhone 13 Pro Max" required>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="device_model" class="form-label fw-bold">موديل الجهاز (اختياري)</label>
-                            <input type="text" class="form-control" id="device_model" name="device_model"
-                                   placeholder="مثال: A2643">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="status" class="form-label fw-bold">حالة الإصلاح</label>
-                           <select class="form-select" id="status" name="status">
-    <option value="تم التسليم" selected>تم التسليم</option>
-    <option value="لم تسلم">لم تسلم</option>
-    <option value="دين">دين</option>
-</select>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="cost" class="form-label fw-bold">تكلفة القطعة (ل.س) *</label>
-                            <div class="input-group">
-                                <input type="number" step="1" min="0" class="form-control" id="cost"
-                                       name="cost" placeholder="0" required>
-                                <span class="input-group-text">ل.س</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="amount_received" class="form-label fw-bold">المبلغ المقبوض (ل.س) *</label>
-                            <div class="input-group">
-                                <input type="number" step="1" min="0" class="form-control" id="amount_received"
-                                       name="amount_received" placeholder="0" required>
-                                <span class="input-group-text">ل.س</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <label for="profit_preview" class="form-label fw-bold mb-0">الربح المتوقع:</label>
-                            <span id="profit_preview" class="badge bg-info fs-6">0 ل.س</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="issues" class="form-label fw-bold">مشاكل الجهاز</label>
-                        <textarea class="form-control" id="issues" name="issues" rows="3"
-                                  placeholder="مثال: نقطة في الشاشة، ميلان في الإطار، كسر في الزجاج..."></textarea>
-                        <small class="text-muted">اكتب المشاكل الموجودة في الجهاز إن وجدت</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="notes" class="form-label fw-bold">ملاحظات إضافية</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2"
-                                  placeholder="أي ملاحظات إضافية..."></textarea>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> حفظ السجل
-                        </button>
-                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> إلغاء
-                        </a>
-                    </div>
-                </form>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                <h5 class="card-title">الإيرادات</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-warning text-dark">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h5 class="card-title">التكاليف</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_cost) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h5 class="card-title">الربح</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_profit) }} ل.س</h3>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-    function calculateProfit() {
-        const cost = parseFloat(document.getElementById('cost').value) || 0;
-        const received = parseFloat(document.getElementById('amount_received').value) || 0;
-        const profit = received - cost;
-        const profitElement = document.getElementById('profit_preview');
+<!-- جدول الأجهزة -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            قائمة الأجهزة المضافة في هذا اليوم
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>العامل</th>
+                        <th>الجهاز</th>
+                        <th>الموديل</th>
+                        <th>التكلفة</th>
+                        <th>المقبوض</th>
+                        <th>الربح</th>
+                        <th>الحالة</th>
+                        <th>الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
+                        <td>{{ record.device_name }}</td>
+                        <td>{{ record.device_model or '-' }}</td>
+                        <td class="text-danger fw-bold">{{ "%.0f"|format(record.cost) }} ل.س</td>
+                        <td class="text-success fw-bold">{{ "%.0f"|format(record.amount_received) }} ل.س</td>
+                        <td>
+                            {% if record.profit >= 0 %}
+                                <span class="badge bg-success">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-secondary">{{ record.status }}</span></td>
+                        <td>{{ record.created_at.strftime('%H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="fas fa-inbox fa-3x d-block mb-2"></i>
+                            لا توجد أجهزة مضافة في هذا اليوم
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        profitElement.textContent = profit.toFixed(0) + ' ل.س';
-
-        if (profit >= 0) {
-            profitElement.className = 'badge bg-success fs-6';
-        } else {
-            profitElement.className = 'badge bg-danger fs-6';
-        }
-    }
-
-    document.getElementById('cost').addEventListener('input', calculateProfit);
-    document.getElementById('amount_received').addEventListener('input', calculateProfit);
-</script>
+<!-- أداء العمال في هذا اليوم -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            أداء العمال في هذا اليوم
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover text-center align-middle">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>العامل</th>
+                        <th>عدد الأجهزة</th>
+                        <th>الإيرادات</th>
+                        <th>التكاليف</th>
+                        <th>الربح</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, stats in workers_stats.items() %}
+                    <tr>
+                        <td class="fw-bold">{{ name }}</td>
+                        <td>{{ stats.count }}</td>
+                        <td class="text-success">{{ "%.0f"|format(stats.revenue) }} ل.س</td>
+                        <td class="text-danger">{{ "%.0f"|format(stats.cost) }} ل.س</td>
+                        <td>
+                            <span class="badge {% if stats.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ "%.0f"|format(stats.profit) }} ل.س
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">لا توجد بيانات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
