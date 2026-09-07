@@ -1,9 +1,9 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from database import *
-from datetime import date, timedelta, datetime
+from datetime import datetime, timedelta, date
 from io import BytesIO
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -133,6 +133,8 @@ def index():
             'profit': sum(r.profit for r in worker_records)
         }
 
+    today_date = date.today()  # التاريخ الحالي
+
     return render_template('index.html',
                           records=records,
                           workers=workers,
@@ -140,7 +142,8 @@ def index():
                           total_revenue=total_revenue,
                           total_cost=total_cost,
                           total_profit=total_profit,
-                          worker_stats=worker_stats)
+                          worker_stats=worker_stats,
+                          today_date=today_date)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_record():
@@ -447,7 +450,7 @@ def download_weekly_report():
     elements.append(Paragraph(f"<b>تقرير الأسبوع</b><br/>(من {start_date.strftime('%Y-%m-%d')} إلى {last_thursday.strftime('%Y-%m-%d')})", title_style))
     elements.append(Spacer(1, 6))
     
-    # إحصائيات عامة للأسبوع (سيتم حسابها لاحقاً)
+    # إحصائيات عامة للأسبوع
     all_records = RepairRecord.query.filter(
         RepairRecord.created_at >= start_date,
         RepairRecord.created_at < end_date
