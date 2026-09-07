@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}تقرير يوم {{ day_date.strftime('%Y-%m-%d') }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center">
+            <i class="fas fa-calendar-day me-2 text-primary"></i>
+            تقرير يوم {{ day_date.strftime('%Y-%m-%d') }} ({{ day_date.strftime('%A') }})
+        </h2>
+        <div class="text-center mt-2">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right me-1"></i> رجوع للرئيسية
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- بطاقات الإحصائيات -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-mobile-alt fa-2x mb-2"></i>
+                <h5 class="card-title">عدد الأجهزة</h5>
+                <h3 class="stat-number">{{ total_records }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                <h5 class="card-title">الإيرادات</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-warning text-dark">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h5 class="card-title">التكاليف</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_cost) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h5 class="card-title">الربح</h5>
+                <h3 class="stat-number">{{ "%.0f"|format(total_profit) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- جدول الأجهزة -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            قائمة الأجهزة المضافة في هذا اليوم
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>العامل</th>
+                        <th>الجهاز</th>
+                        <th>الموديل</th>
+                        <th>التكلفة</th>
+                        <th>المقبوض</th>
+                        <th>الربح</th>
+                        <th>الحالة</th>
+                        <th>الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
+                        <td>{{ record.device_name }}</td>
+                        <td>{{ record.device_model or '-' }}</td>
+                        <td class="text-danger fw-bold">{{ "%.0f"|format(record.cost) }} ل.س</td>
+                        <td class="text-success fw-bold">{{ "%.0f"|format(record.amount_received) }} ل.س</td>
+                        <td>
+                            {% if record.profit >= 0 %}
+                                <span class="badge bg-success">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-secondary">{{ record.status }}</span></td>
+                        <td>{{ record.created_at.strftime('%H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="fas fa-inbox fa-3x d-block mb-2"></i>
+                            لا توجد أجهزة مضافة في هذا اليوم
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- أداء العمال في هذا اليوم -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            أداء العمال في هذا اليوم
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover text-center align-middle">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>العامل</th>
+                        <th>عدد الأجهزة</th>
+                        <th>الإيرادات</th>
+                        <th>التكاليف</th>
+                        <th>الربح</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, stats in workers_stats.items() %}
+                    <tr>
+                        <td class="fw-bold">{{ name }}</td>
+                        <td>{{ stats.count }}</td>
+                        <td class="text-success">{{ "%.0f"|format(stats.revenue) }} ل.س</td>
+                        <td class="text-danger">{{ "%.0f"|format(stats.cost) }} ل.س</td>
+                        <td>
+                            <span class="badge {% if stats.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ "%.0f"|format(stats.profit) }} ل.س
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">لا توجد بيانات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
