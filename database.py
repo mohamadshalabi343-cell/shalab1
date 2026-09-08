@@ -21,7 +21,7 @@ class RepairRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     worker_id = db.Column(db.Integer, db.ForeignKey('workers.id'), nullable=False)
     device_name = db.Column(db.String(200), nullable=False)
-    device_model = db.Column(db.String(200), nullable=True)  # اختياري
+    device_model = db.Column(db.String(200), nullable=True)
     cost = db.Column(db.Float, nullable=False, default=0.0)
     amount_received = db.Column(db.Float, nullable=False, default=0.0)
     issues = db.Column(db.Text, nullable=True)
@@ -32,10 +32,12 @@ class RepairRecord(db.Model):
     
     @property
     def profit(self):
+        """الربح = (المبلغ المقبوض الفعلي حسب الحالة) - التكلفة"""
         return self.effective_amount_received - self.cost
     
     @property
     def effective_amount_received(self):
+        """المبلغ المقبوض يُعتد به فقط إذا كانت الحالة 'تم التسليم'"""
         if self.status == 'تم التسليم':
             return self.amount_received
         return 0
