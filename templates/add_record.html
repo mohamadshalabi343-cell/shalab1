@@ -82,4 +82,43 @@
 
                     <div class="mb-3">
                         <label for="notes" class="form-label fw-bold">ملاحظات إضافية</label>
-                        <t
+                        <textarea class="form-control" id="notes" name="notes" rows="2"
+                                  placeholder="أي ملاحظات إضافية..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> حفظ السجل
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function calculateProfit() {
+        const cost = parseFloat(document.getElementById('cost').value) || 0;
+        const received = parseFloat(document.getElementById('amount_received').value) || 0;
+        const profit = received - cost;
+        const profitElement = document.getElementById('profit_preview');
+
+        profitElement.textContent = profit.toFixed(0) + ' ل.س';
+
+        if (profit >= 0) {
+            profitElement.className = 'badge bg-success fs-6';
+        } else {
+            profitElement.className = 'badge bg-danger fs-6';
+        }
+    }
+
+    document.getElementById('cost').addEventListener('input', calculateProfit);
+    document.getElementById('amount_received').addEventListener('input', calculateProfit);
+</script>
+{% endblock %}
