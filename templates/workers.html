@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}إدارة العمال{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center">
+            <i class="fas fa-users me-2 text-primary"></i>
+            إدارة العمال
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    إضافة عامل جديد
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_worker') }}">
+                    <div class="mb-3">
+                        <label for="worker_name" class="form-label fw-bold">اسم العامل</label>
+                        <input type="text" class="form-control" id="worker_name" name="worker_name"
+                               placeholder="أدخل اسم العامل" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus me-1"></i> إضافة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    قائمة العمال
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover text-center align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>الاسم</th>
+                                <th>عدد الإصلاحات</th>
+                                <th>الإيرادات</th>
+                                <th>الربح</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for worker in workers %}
+                            <tr>
+                                <td>{{ worker.id }}</td>
+                                <td class="fw-bold">{{ worker.name }}</td>
+                                <td>
+                                    {% if worker.id in worker_performance %}
+                                        {{ worker_performance[worker.id].total_records }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </td>
+                                <td class="text-success">
+                                    {% if worker.id in worker_performance %}
+                                        {{ "%.0f"|format(worker_performance[worker.id].total_revenue) }} ل.س
+                                    {% else %}
+                                        0 ل.س
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if worker.id in worker_performance %}
+                                        {% set profit = worker_performance[worker.id].total_profit %}
+                                        <span class="badge {% if profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ "%.0f"|format(profit) }} ل.س
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">0 ل.س</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form action="{{ url_for('delete_worker', worker_id=worker.id) }}" method="POST"
+                                          class="d-inline" onsubmit="return confirmDelete('هل أنت متأكد من حذف هذا العامل؟');">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    لا يوجد عمال مسجلين
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

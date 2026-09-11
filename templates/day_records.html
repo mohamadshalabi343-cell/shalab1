@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}سجلات يوم {{ date }}{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="mb-0">
+                <i class="fas fa-calendar-day me-2 text-primary"></i>
+                الأجهزة المصلحة يوم {{ date }}
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('daily_pdf', date=date) }}" class="btn btn-danger">
+                    <i class="fas fa-file-pdf me-1"></i> تحميل PDF
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-1"></i> رجوع
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">عدد الأجهزة</h6>
+                <h3 class="stat-number mb-0">{{ total_records }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">الإيرادات</h6>
+                <h3 class="stat-number mb-0">{{ "%.0f"|format(total_revenue) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="card stat-card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">التكاليف</h6>
+                <h3 class="stat-number mb-0">{{ "%.0f"|format(total_cost) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">الربح</h6>
+                <h3 class="stat-number mb-0">{{ "%.0f"|format(total_profit) }} ل.س</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped text-center align-middle" id="recordsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>العامل</th>
+                        <th>الجهاز</th>
+                        <th>الموديل</th>
+                        <th>الحالة</th>
+                        <th>التكلفة</th>
+                        <th>المقبوض</th>
+                        <th>الربح</th>
+                        <th>الوقت</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
+                        <td class="fw-bold">{{ record.device_name }}</td>
+                        <td>{{ record.device_model or '-' }}</td>
+                        <td>
+                            <span class="badge
+                                {% if record.status == 'تم التسليم' %}bg-success
+                                {% elif record.status == 'لم تسلم' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ record.status }}
+                            </span>
+                        </td>
+                        <td class="text-danger fw-bold">{{ "%.0f"|format(record.cost) }} ل.س</td>
+                        <td class="text-success fw-bold">{{ "%.0f"|format(record.effective_amount_received) }} ل.س</td>
+                        <td>
+                            {% if record.profit >= 0 %}
+                                <span class="badge bg-success">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ "%.0f"|format(record.profit) }} ل.س</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.created_at.strftime('%H:%M') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('view_record', record_id=record.id) }}" class="btn btn-info" title="عرض">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_record', record_id=record.id) }}" class="btn btn-warning" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('delete_record', record_id=record.id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirmDelete('هل أنت متأكد من حذف هذا السجل؟');">
+                                    <button type="submit" class="btn btn-danger" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">لا توجد سجلات في هذا اليوم</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

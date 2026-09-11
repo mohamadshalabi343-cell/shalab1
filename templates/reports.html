@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}التقارير{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center mb-4">
+            <i class="fas fa-file-pdf me-2 text-danger"></i>
+            تقارير PDF
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- التقرير اليومي -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-day me-2"></i>
+                    تقرير يومي
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">قم باختيار اليوم لتوليد تقرير PDF يحتوي على جميع الأجهزة المصلحة فيه مع الإحصائيات.</p>
+                <form action="" method="GET" onsubmit="event.preventDefault(); window.location.href='/reports/daily/' + document.getElementById('daily_date').value + '.pdf';">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اختر التاريخ:</label>
+                        <input type="date" id="daily_date" class="form-control" value="{{ today }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-file-pdf me-1"></i> توليد تقرير PDF يومي
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- التقرير الأسبوعي -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-week me-2"></i>
+                    تقرير أسبوعي
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">يبدأ الأسبوع من يوم <strong>السبت</strong>. اختر أي يوم داخل الأسبوع المطلوب وسيتم توليد تقرير الأسبوع كامل.</p>
+                <form action="" method="GET" onsubmit="event.preventDefault(); window.location.href='/reports/weekly.pdf?start=' + document.getElementById('week_date').value;">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اختر تاريخ من داخل الأسبوع:</label>
+                        <input type="date" id="week_date" class="form-control" value="{{ week_start }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-file-pdf me-1"></i> توليد تقرير PDF أسبوعي
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>ملاحظة:</strong> يتم فتح التقرير في المتصفح مباشرة، ويمكنك حفظه أو طباعته من خلال أزرار المتصفح.
+</div>
+{% endblock %}

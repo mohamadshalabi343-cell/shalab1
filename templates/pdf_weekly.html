@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تقرير أسبوعي</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DejaVu Sans', 'Noto Sans Arabic', 'Arial', sans-serif;
+            direction: rtl;
+            color: #222;
+            font-size: 11px;
+            margin: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 3px solid #27ae60;
+            padding-bottom: 8px;
+            margin-bottom: 5px;
+            font-size: 20px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .stat-box {
+            flex: 1;
+            min-width: 120px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        .stat-box .label {
+            color: #7f8c8d;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .stat-box .value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-box.revenue { background: #d4edda; border-color: #28a745; }
+        .stat-box.cost { background: #f8d7da; border-color: #dc3545; }
+        .stat-box.profit { background: #d1ecf1; border-color: #17a2b8; }
+        .stat-box.count { background: #cce5ff; border-color: #007bff; }
+
+        .day-section {
+            margin-top: 18px;
+            page-break-inside: avoid;
+        }
+        .day-header {
+            background: #34495e;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px 6px 0 0;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .day-header .day-summary {
+            font-size: 11px;
+            font-weight: normal;
+            opacity: 0.95;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        th {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 6px 3px;
+            text-align: center;
+            border: 1px solid #bdc3c7;
+            font-weight: bold;
+        }
+        td {
+            padding: 5px 3px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 9px;
+            color: #fff;
+        }
+        .bg-success { background: #28a745; }
+        .bg-warning { background: #ffc107; color: #000; }
+        .bg-danger { background: #dc3545; }
+        .text-success { color: #28a745; font-weight: bold; }
+        .text-danger { color: #dc3545; font-weight: bold; }
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 10px;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>التقرير الأسبوعي - ورشة الجوالات</h1>
+    <div class="subtitle">الفترة من {{ start_date }} إلى {{ end_date }}</div>
+
+    <div class="stats">
+        <div class="stat-box count">
+            <div class="label">إجمالي الأجهزة</div>
+            <div class="value">{{ total_records }}</div>
+        </div>
+        <div class="stat-box revenue">
+            <div class="label">إجمالي الإيرادات</div>
+            <div class="value">{{ "%.0f"|format(total_revenue) }} ل.س</div>
+        </div>
+        <div class="stat-box cost">
+            <div class="label">إجمالي التكاليف</div>
+            <div class="value">{{ "%.0f"|format(total_cost) }} ل.س</div>
+        </div>
+        <div class="stat-box profit">
+            <div class="label">إجمالي الربح</div>
+            <div class="value">{{ "%.0f"|format(total_profit) }} ل.س</div>
+        </div>
+    </div>
+
+    {% for day in days_data %}
+    <div class="day-section">
+        <div class="day-header">
+            <span><i>📅</i> {{ day.date }}</span>
+            <span class="day-summary">
+                عدد: {{ day.count }} |
+                إيرادات: {{ "%.0f"|format(day.revenue) }} |
+                تكاليف: {{ "%.0f"|format(day.cost) }} |
+                ربح: {{ "%.0f"|format(day.profit) }} ل.س
+            </span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>العامل</th>
+                    <th>الجهاز</th>
+                    <th>الموديل</th>
+                    <th>الحالة</th>
+                    <th>التكلفة</th>
+                    <th>المقبوض</th>
+                    <th>الربح</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in day.records %}
+                <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.worker.name if r.worker else '-' }}</td>
+                    <td>{{ r.device_name }}</td>
+                    <td>{{ r.device_model or '-' }}</td>
+                    <td>
+                        <span class="badge
+                            {% if r.status == 'تم التسليم' %}bg-success
+                            {% elif r.status == 'لم تسلم' %}bg-warning
+                            {% else %}bg-danger{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td class="text-danger">{{ "%.0f"|format(r.cost) }}</td>
+                    <td class="text-success">{{ "%.0f"|format(r.effective_amount_received) }}</td>
+                    <td>
+                        <span class="badge {% if r.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ "%.0f"|format(r.profit) }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align:center; color:#7f8c8d; padding: 30px;">لا توجد أجهزة في هذا الأسبوع</p>
+    {% endfor %}
+
+    <div class="footer">
+        تم إنشاء التقرير بتاريخ {{ start_date }} إلى {{ end_date }} - نظام إدارة ورشة الجوالات
+    </div>
+</body>
+</html>

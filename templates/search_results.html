@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}نتائج البحث{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h2 class="text-center mb-3">
+            <i class="fas fa-search me-2 text-primary"></i>
+            البحث عن الأجهزة
+        </h2>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('search') }}" method="GET" class="row g-2">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control" value="{{ query }}"
+                       placeholder="اسم الجهاز، الموديل، العامل، المشكلة...">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="from" class="form-control" value="{{ date_from }}"
+                       placeholder="من تاريخ">
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="to" class="form-control" value="{{ date_to }}"
+                       placeholder="إلى تاريخ">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if query or date_from or date_to %}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            نتائج البحث ({{ total_records }})
+        </h5>
+        {% if total_records > 0 %}
+        <div class="d-flex gap-3">
+            <span class="text-success">الإيرادات: {{ "%.0f"|format(total_revenue) }} ل.س</span>
+            <span class="text-danger">التكاليف: {{ "%.0f"|format(total_cost) }} ل.س</span>
+            <span class="badge bg-info">الربح: {{ "%.0f"|format(total_profit) }} ل.س</span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>العامل</th>
+                        <th>الجهاز</th>
+                        <th>الموديل</th>
+                        <th>الحالة</th>
+                        <th>التكلفة</th>
+                        <th>المقبوض</th>
+                        <th>الربح</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
+                        <td class="fw-bold">{{ record.device_name }}</td>
+                        <td>{{ record.device_model or '-' }}</td>
+                        <td>
+                            <span class="badge
+                                {% if record.status == 'تم التسليم' %}bg-success
+                                {% elif record.status == 'لم تسلم' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ record.status }}
+                            </span>
+                        </td>
+                        <td class="text-danger fw-bold">{{ "%.0f"|format(record.cost) }} ل.س</td>
+                        <td class="text-success fw-bold">{{ "%.0f"|format(record.effective_amount_received) }} ل.س</td>
+                        <td>
+                            <span class="badge {% if record.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ "%.0f"|format(record.profit) }} ل.س
+                            </span>
+                        </td>
+                        <td>{{ record.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('view_record', record_id=record.id) }}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_record', record_id=record.id) }}" class="btn btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد نتائج مطابقة للبحث</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="fas fa-search fa-4x mb-3"></i>
+    <p>أدخل كلمة للبحث أو حدد نطاق تاريخ</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تقرير يومي</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DejaVu Sans', 'Noto Sans Arabic', 'Arial', sans-serif;
+            direction: rtl;
+            color: #222;
+            font-size: 12px;
+            margin: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 8px;
+            margin-bottom: 5px;
+            font-size: 20px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .stat-box {
+            flex: 1;
+            min-width: 120px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        .stat-box .label {
+            color: #7f8c8d;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .stat-box .value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-box.revenue { background: #d4edda; border-color: #28a745; }
+        .stat-box.cost { background: #f8d7da; border-color: #dc3545; }
+        .stat-box.profit { background: #d1ecf1; border-color: #17a2b8; }
+        .stat-box.count { background: #cce5ff; border-color: #007bff; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        th {
+            background: #2c3e50;
+            color: #fff;
+            padding: 8px 4px;
+            text-align: center;
+            border: 1px solid #233140;
+        }
+        td {
+            padding: 6px 4px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #fff;
+        }
+        .bg-success { background: #28a745; }
+        .bg-warning { background: #ffc107; color: #000; }
+        .bg-danger { background: #dc3545; }
+        .bg-primary { background: #007bff; }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 10px;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 8px;
+        }
+        .text-truncate {
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>تقرير يومي - ورشة الجوالات</h1>
+    <div class="subtitle">التاريخ: {{ date }}</div>
+
+    <div class="stats">
+        <div class="stat-box count">
+            <div class="label">عدد الأجهزة</div>
+            <div class="value">{{ total_records }}</div>
+        </div>
+        <div class="stat-box revenue">
+            <div class="label">إجمالي الإيرادات</div>
+            <div class="value">{{ "%.0f"|format(total_revenue) }} ل.س</div>
+        </div>
+        <div class="stat-box cost">
+            <div class="label">إجمالي التكاليف</div>
+            <div class="value">{{ "%.0f"|format(total_cost) }} ل.س</div>
+        </div>
+        <div class="stat-box profit">
+            <div class="label">إجمالي الربح</div>
+            <div class="value">{{ "%.0f"|format(total_profit) }} ل.س</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>العامل</th>
+                <th>الجهاز</th>
+                <th>الموديل</th>
+                <th>الحالة</th>
+                <th>التكلفة</th>
+                <th>المقبوض</th>
+                <th>الربح</th>
+                <th>الوقت</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.worker.name if r.worker else '-' }}</td>
+                <td>{{ r.device_name }}</td>
+                <td>{{ r.device_model or '-' }}</td>
+                <td>
+                    <span class="badge
+                        {% if r.status == 'تم التسليم' %}bg-success
+                        {% elif r.status == 'لم تسلم' %}bg-warning
+                        {% else %}bg-danger{% endif %}">
+                        {{ r.status }}
+                    </span>
+                </td>
+                <td>{{ "%.0f"|format(r.cost) }}</td>
+                <td>{{ "%.0f"|format(r.effective_amount_received) }}</td>
+                <td>
+                    <span class="badge {% if r.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ "%.0f"|format(r.profit) }}
+                    </span>
+                </td>
+                <td>{{ r.created_at.strftime('%H:%M') if r.created_at else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9">لا توجد أجهزة في هذا اليوم</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        تم إنشاء التقرير بتاريخ {{ date }} - نظام إدارة ورشة الجوالات
+    </div>
+</body>
+</html>
