@@ -64,10 +64,11 @@
                 <thead class="table-dark">
                     <tr>
                         <th>#</th>
+                        <th>الحالة</th>
                         <th>العامل</th>
                         <th>الجهاز</th>
                         <th>الموديل</th>
-                        <th>الحالة</th>
+                        <th>حالة الإصلاح</th>
                         <th>التكلفة</th>
                         <th>المقبوض</th>
                         <th>الربح</th>
@@ -79,6 +80,13 @@
                     {% for record in records %}
                     <tr>
                         <td>{{ record.id }}</td>
+                        <td>
+                            {% if record.is_archived %}
+                                <span class="badge bg-secondary">مؤرشف</span>
+                            {% else %}
+                                <span class="badge bg-success">نشط</span>
+                            {% endif %}
+                        </td>
                         <td><span class="badge bg-primary">{{ record.worker.name }}</span></td>
                         <td class="fw-bold">{{ record.device_name }}</td>
                         <td>{{ record.device_model or '-' }}</td>
@@ -119,7 +127,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="10" class="text-center py-4 text-muted">لا توجد سجلات في هذا اليوم</td>
+                        <td colspan="11" class="text-center py-4 text-muted">لا توجد سجلات في هذا اليوم</td>
                     </tr>
                     {% endfor %}
                 </tbody>
