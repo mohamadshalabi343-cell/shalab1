@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from flask import (Flask, render_template, request, redirect, url_for,
                    flash, jsonify, make_response)
+from sqlalchemy import text
 from database import *
 
 app = Flask(__name__)
@@ -17,12 +18,31 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    # ترحيل بسيط: إضافة عمود is_archived إذا لم يكن موجوداً
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE repair_records ADD COLUMN is_archived BOOLEAN DEFAULT FALSE"
+            ))
+            conn.commit()
+            print("✅ تمت إضافة عمود is_archived")
+    except Exception:
+        pass  # العمود موجود مسبقاً
+
+    # ضبط أي قيم NULL
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text(
+                "UPDATE repair_records SET is_archived = FALSE WHERE is_archived IS NULL"
+            ))
+            conn.commit()
+    except Exception:
+        pass
 
 
 # ============ دوال مساعدة ============
 
 def get_day_range(date_str):
-    """يرجع (start, end) ليوم معين"""
     day = datetime.strptime(date_str, '%Y-%m-%d')
     start = day.replace(hour=0, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
@@ -30,12 +50,10 @@ def get_day_range(date_str):
 
 
 def get_week_range(date_str=None):
-    """يرجع (start, end) للأسبوع (يبدأ السبت)"""
     if date_str:
         ref = datetime.strptime(date_str, '%Y-%m-%d')
     else:
         ref = datetime.utcnow()
-    # السبت = 5 في Python
     days_since_sat = (ref.weekday() - 5) % 7
     start = (ref - timedelta(days=days_since_sat)).replace(
         hour=0, minute=0, second=0, microsecond=0)
@@ -54,22 +72,35 @@ def calc_totals(records):
     }
 
 
-# ============ الصفحات الرئيسية ============
+def group_by_day(records):
+    groups = defaultdict(list)
+    for r in records:
+        key = r.created_at.strftime('%Y-%m-%d') if r.created_at else 'غير معروف'
+        groups[key].append(r)
+    return groups
+
+
+# ============ الصفحة الرئيسية ============
 
 @app.route('/')
 def index():
-    records = RepairRecord.query.order_by(RepairRecord.created_at.desc()).all()
+    # السجلات النشطة (الفترة الحالية) - للساعات والإحصائيات العلوية
+    current_records = (RepairRecord.query
+                       .filter_by(is_archived=False)
+                       .order_by(RepairRecord.created_at.desc())
+                       .all())
+
+    # جميع السجلات - لسجل الأجهزة الكامل في الأسفل
+    all_records = (RepairRecord.query
+                   .order_by(RepairRecord.created_at.desc())
+                   .all())
+
     workers = Worker.query.all()
 
-    # تجميع حسب اليوم
-    daily_groups = defaultdict(list)
-    for r in records:
-        key = r.created_at.strftime('%Y-%m-%d') if r.created_at else 'غير معروف'
-        daily_groups[key].append(r)
-
+    # ملخص يومي للفترة الحالية فقط
     daily_summary = []
-    for date_key in sorted(daily_groups.keys(), reverse=True):
-        day_records = daily_groups[date_key]
+    for date_key in sorted(group_by_day(current_records).keys(), reverse=True):
+        day_records = group_by_day(current_records)[date_key]
         totals = calc_totals(day_records)
         daily_summary.append({
             'date': date_key,
@@ -82,14 +113,31 @@ def index():
             'debt': sum(1 for r in day_records if r.status == 'دين'),
         })
 
-    total_records = len(records)
-    total_revenue = sum(r.effective_amount_received for r in records)
-    total_cost = sum(r.cost for r in records)
+    # سجل الأجهزة الكامل (جميع الفترات)
+    all_groups = group_by_day(all_records)
+    full_log = []
+    for date_key in sorted(all_groups.keys(), reverse=True):
+        day_records = all_groups[date_key]
+        totals = calc_totals(day_records)
+        full_log.append({
+            'date': date_key,
+            'count': totals['count'],
+            'revenue': totals['revenue'],
+            'cost': totals['cost'],
+            'profit': totals['profit'],
+            'has_archived': any(r.is_archived for r in day_records),
+            'has_active': any(not r.is_archived for r in day_records),
+        })
+
+    # إحصائيات الفترة الحالية فقط
+    total_records = len(current_records)
+    total_revenue = sum(r.effective_amount_received for r in current_records)
+    total_cost = sum(r.cost for r in current_records)
     total_profit = total_revenue - total_cost
 
     worker_stats = {}
     for worker in workers:
-        worker_records = [r for r in records if r.worker_id == worker.id]
+        worker_records = [r for r in current_records if r.worker_id == worker.id]
         worker_stats[worker.name] = {
             'count': len(worker_records),
             'revenue': sum(r.effective_amount_received for r in worker_records),
@@ -97,19 +145,43 @@ def index():
             'profit': sum(r.profit for r in worker_records)
         }
 
+    archived_count = sum(1 for r in all_records if r.is_archived)
+
     return render_template('index.html',
                           daily_summary=daily_summary,
+                          full_log=full_log,
                           workers=workers,
                           total_records=total_records,
                           total_revenue=total_revenue,
                           total_cost=total_cost,
                           total_profit=total_profit,
-                          worker_stats=worker_stats)
+                          worker_stats=worker_stats,
+                          archived_count=archived_count)
+
+
+# ============ إعادة تعيين الفترة ============
+
+@app.route('/reset', methods=['POST'])
+def reset_period():
+    """أرشفة كل السجلات النشطة (تصفير الإحصائيات) مع الاحتفاظ بها في السجل الكامل"""
+    try:
+        count = RepairRecord.query.filter_by(is_archived=False).update(
+            {RepairRecord.is_archived: True}
+        )
+        db.session.commit()
+        if count:
+            flash(f'تم إعادة تعيين الفترة الحالية. تم أرشفة {count} سجل مع الاحتفاظ بها في سجل الأجهزة بالأسفل.', 'success')
+        else:
+            flash('لا توجد سجلات نشطة لإعادة تعيينها.', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء إعادة التعيين: {str(e)}', 'error')
+    return redirect(url_for('index'))
 
 
 @app.route('/day/<date>')
 def day_records(date):
-    """عرض سجلات يوم معين"""
+    """عرض سجلات يوم معين (جميع الحالات: نشطة + مؤرشفة)"""
     try:
         start, end = get_day_range(date)
     except ValueError:
@@ -133,7 +205,6 @@ def day_records(date):
 
 @app.route('/search')
 def search():
-    """البحث في السجلات"""
     q = request.args.get('q', '').strip()
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
@@ -210,7 +281,8 @@ def add_record():
                 amount_received=amount_received,
                 issues=issues,
                 notes=notes,
-                status=status
+                status=status,
+                is_archived=False
             )
 
             db.session.add(record)
@@ -348,7 +420,6 @@ def reports():
 
 
 def render_pdf(template_name, **context):
-    """دالة مساعدة لتوليد PDF من قالب HTML"""
     from weasyprint import HTML
     html_string = render_template(template_name, **context)
     pdf_bytes = HTML(string=html_string).write_pdf()
@@ -359,7 +430,6 @@ def render_pdf(template_name, **context):
 
 @app.route('/reports/daily/<date>.pdf')
 def daily_pdf(date):
-    """تقرير PDF يومي"""
     try:
         start, end = get_day_range(date)
     except ValueError:
@@ -386,7 +456,6 @@ def daily_pdf(date):
 
 @app.route('/reports/weekly.pdf')
 def weekly_pdf():
-    """تقرير PDF أسبوعي"""
     week_start_str = request.args.get('start')
     start, end = get_week_range(week_start_str)
 
@@ -395,12 +464,7 @@ def weekly_pdf():
         RepairRecord.created_at < end
     ).order_by(RepairRecord.created_at.desc()).all()
 
-    # تجميع حسب اليوم
-    daily_groups = defaultdict(list)
-    for r in records:
-        key = r.created_at.strftime('%Y-%m-%d') if r.created_at else 'غير معروف'
-        daily_groups[key].append(r)
-
+    daily_groups = group_by_day(records)
     days_data = []
     for key in sorted(daily_groups.keys()):
         day_recs = daily_groups[key]
