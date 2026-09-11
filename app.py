@@ -1,4 +1,44 @@
-return render_template('index.html',
+import os
+from datetime import datetime  # تم إضافة هذا الاستيراد المفقود
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from database import *
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-here'
+uri = os.environ.get('DATABASE_URL', 'sqlite:///workshop.db')
+if uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
+# ============ الصفحات الرئيسية ============
+
+@app.route('/')
+def index():
+    records = RepairRecord.query.order_by(RepairRecord.created_at.desc()).all()
+    workers = Worker.query.all()
+
+    total_records = len(records)
+    total_revenue = sum(r.effective_amount_received for r in records)
+    total_cost = sum(r.cost for r in records)
+    total_profit = total_revenue - total_cost   # الربح = الإيرادات الفعلية - التكاليف الكلية
+
+    worker_stats = {}
+    for worker in workers:
+        worker_records = [r for r in records if r.worker_id == worker.id]
+        worker_stats[worker.name] = {
+            'count': len(worker_records),
+            'revenue': sum(r.effective_amount_received for r in worker_records),
+            'cost': sum(r.cost for r in worker_records),
+            'profit': sum(r.profit for r in worker_records)
+        }
+
+    return render_template('index.html',
                           records=records,
                           workers=workers,
                           total_records=total_records,
@@ -192,9 +232,6 @@ def api_stats():
 
     return jsonify(stats)
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-    return jsonify(stats)
-
+# ============ تشغيل التطبيق ============
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
