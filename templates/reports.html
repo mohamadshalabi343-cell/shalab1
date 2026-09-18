@@ -23,8 +23,8 @@
                 </h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">قم باختيار اليوم لتوليد تقرير PDF يحتوي على جميع الأجهزة المصلحة فيه مع الإحصائيات.</p>
-                <form action="" method="GET" onsubmit="event.preventDefault(); window.location.href='/reports/daily/' + document.getElementById('daily_date').value + '.pdf';">
+                <p class="text-muted small">اختر اليوم لتوليد تقرير PDF يحتوي على جميع الأجهزة المصلحة فيه مع الإحصائيات.</p>
+                <form id="dailyForm">
                     <div class="mb-3">
                         <label class="form-label fw-bold">اختر التاريخ:</label>
                         <input type="date" id="daily_date" class="form-control" value="{{ today }}" required>
@@ -47,8 +47,8 @@
                 </h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">يبدأ الأسبوع من يوم <strong>السبت</strong>. اختر أي يوم داخل الأسبوع المطلوب وسيتم توليد تقرير الأسبوع كامل.</p>
-                <form action="" method="GET" onsubmit="event.preventDefault(); window.location.href='/reports/weekly.pdf?start=' + document.getElementById('week_date').value;">
+                <p class="text-muted small">يبدأ الأسبوع من يوم <strong>السبت</strong>. اختر أي يوم داخل الأسبوع المطلوب.</p>
+                <form id="weeklyForm">
                     <div class="mb-3">
                         <label class="form-label fw-bold">اختر تاريخ من داخل الأسبوع:</label>
                         <input type="date" id="week_date" class="form-control" value="{{ week_start }}" required>
@@ -64,6 +64,22 @@
 
 <div class="alert alert-info">
     <i class="fas fa-info-circle me-2"></i>
-    <strong>ملاحظة:</strong> يتم فتح التقرير في المتصفح مباشرة، ويمكنك حفظه أو طباعته من خلال أزرار المتصفح.
+    <strong>ملاحظة:</strong> يتم فتح التقرير في المتصفح مباشرة، ويمكنك حفظه أو طباعته.
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('dailyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var d = document.getElementById('daily_date').value;
+        if (d) window.location.href = '/reports/daily/' + d + '.pdf';
+    });
+
+    document.getElementById('weeklyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var d = document.getElementById('week_date').value;
+        if (d) window.location.href = '/reports/weekly.pdf?start=' + d;
+    });
+</script>
 {% endblock %}
